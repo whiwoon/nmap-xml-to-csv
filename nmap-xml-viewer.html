@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nmap XML Viewer</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --text: #1d2329;
+    --muted: #65707c;
+    --border: #d7dce2;
+    --accent: #2f6fed;
+    --accent2: #e8efff;
+    --row-alt: #fafbfc;
+    --danger: #b42318;
+    --success: #067647;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121417;
+      --panel: #1a1d21;
+      --text: #eef1f4;
+      --muted: #a9b1bb;
+      --border: #343a40;
+      --accent: #7aa2ff;
+      --accent2: #1f2a44;
+      --row-alt: #16191d;
+      --danger: #ff8a80;
+      --success: #6ce9a6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  h1 { margin: 0 0 6px; font-size: 22px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  main { padding: 18px 24px 36px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    align-items: end;
+  }
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+  }
+  input[type="file"] {
+    width: 100%;
+  }
+  button {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  button:hover { filter: brightness(0.98); }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .status.error { color: var(--danger); }
+  .status.ok { color: var(--success); }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+  }
+  .metric {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .metric .label { color: var(--muted); font-size: 12px; }
+  .metric .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .table-wrap {
+    overflow: auto;
+    max-height: 68vh;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 1200px;
+    font-size: 12px;
+  }
+  th, td {
+    border-bottom: 1px solid var(--border);
+    padding: 8px 9px;
+    text-align: left;
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--panel);
+    cursor: pointer;
+    user-select: none;
+  }
+  tbody tr:nth-child(even) td { background: var(--row-alt); }
+  td.wrap { white-space: normal; min-width: 180px; max-width: 360px; }
+  .section-title {
+    margin: 0 0 12px;
+    font-size: 17px;
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .pill {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--accent2);
+    color: var(--text);
+    font-size: 11px;
+  }
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+  .dropzone.drag { border-color: var(--accent); background: var(--accent2); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Nmap XML Viewer</h1>
+  <div class="sub">Nmap <code>-oX</code> / <code>-oA</code> XML을 브라우저에서 로컬 처리합니다. 파일은 외부로 업로드되지 않습니다.</div>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="controls">
+      <label>
+        Nmap XML 파일
+        <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" />
+      </label>
+
+      <label>
+        상태
+        <select id="stateFilter">
+          <option value="open" selected>open만</option>
+          <option value="">전체 상태</option>
+          <option value="open|filtered">open|filtered</option>
+          <option value="filtered">filtered</option>
+          <option value="closed">closed</option>
+        </select>
+      </label>
+
+      <label>
+        IP / Hostname 검색
+        <input id="hostFilter" type="text" placeholder="예: 10.96.2.10 또는 server01" />
+      </label>
+
+      <label>
+        Port
+        <input id="portFilter" type="text" placeholder="예: 443" />
+      </label>
+
+      <label>
+        Service / Product 검색
+        <input id="serviceFilter" type="text" placeholder="예: http, ssh, nginx" />
+      </label>
+    </div>
+
+    <div class="toolbar">
+      <button id="resetBtn">필터 초기화</button>
+      <button id="csvBtn" class="primary" disabled>현재 결과 CSV 저장</button>
+      <button id="allCsvBtn" disabled>전체 결과 CSV 저장</button>
+    </div>
+
+    <div id="dropzone" class="dropzone">XML 파일을 여기로 끌어다 놓아도 됩니다.</div>
+    <div id="status" class="status">XML 파일을 선택하세요.</div>
+  </section>
+
+  <section class="panel">
+    <h2 class="section-title">요약</h2>
+    <div class="summary-grid">
+      <div class="metric"><div class="label">호스트</div><div id="hostCount" class="value">0</div></div>
+      <div class="metric"><div class="label">포트 행</div><div id="rowCount" class="value">0</div></div>
+      <div class="metric"><div class="label">현재 필터 결과</div><div id="filteredCount" class="value">0</div></div>
+      <div class="metric"><div class="label">서비스 종류</div><div id="serviceCount" class="value">0</div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 class="section-title">서비스별 요약</h2>
+    <div class="table-wrap" style="max-height: 34vh;">
+      <table id="serviceSummaryTable">
+        <thead>
+          <tr>
+            <th data-summary-key="service">Service</th>
+            <th data-summary-key="port">Port</th>
+            <th data-summary-key="protocol">Protocol</th>
+            <th data-summary-key="hosts">Hosts</th>
+            <th>IP 목록</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="hint">서비스 요약은 현재 필터 결과를 기준으로 계산합니다.</div>
+  </section>
+
+  <section class="panel">
+    <h2 class="section-title">포트 상세</h2>
+    <div class="table-wrap">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th data-key="IP">IP</th>
+            <th data-key="Hostname">Hostname</th>
+            <th data-key="MAC">MAC</th>
+            <th data-key="MACVendor">MACVendor</th>
+            <th data-key="Port">Port</th>
+            <th data-key="Protocol">Protocol</th>
+            <th data-key="State">State</th>
+            <th data-key="Service">Service</th>
+            <th data-key="Product">Product</th>
+            <th data-key="Version">Version</th>
+            <th data-key="ExtraInfo">ExtraInfo</th>
+            <th data-key="CPE">CPE</th>
+            <th data-key="OS">OS</th>
+            <th data-key="OSAccuracy">OSAccuracy</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const fileInput = document.getElementById('fileInput');
+  const dropzone = document.getElementById('dropzone');
+  const statusEl = document.getElementById('status');
+  const resultBody = document.querySelector('#resultTable tbody');
+  const summaryBody = document.querySelector('#serviceSummaryTable tbody');
+
+  const stateFilter = document.getElementById('stateFilter');
+  const hostFilter = document.getElementById('hostFilter');
+  const portFilter = document.getElementById('portFilter');
+  const serviceFilter = document.getElementById('serviceFilter');
+
+  const resetBtn = document.getElementById('resetBtn');
+  const csvBtn = document.getElementById('csvBtn');
+  const allCsvBtn = document.getElementById('allCsvBtn');
+
+  const hostCount = document.getElementById('hostCount');
+  const rowCount = document.getElementById('rowCount');
+  const filteredCount = document.getElementById('filteredCount');
+  const serviceCount = document.getElementById('serviceCount');
+
+  let rows = [];
+  let filteredRows = [];
+  let sourceFileName = 'nmap';
+
+  let sortKey = 'IP';
+  let sortAsc = true;
+
+  const text = (node, attr) => {
+    if (!node) return '';
+    if (attr) return node.getAttribute(attr) || '';
+    return (node.textContent || '').trim();
+  };
+
+  function getFirstAddress(host, type) {
+    const list = [...host.querySelectorAll(':scope > address')];
+    if (type) {
+      const found = list.find(x => x.getAttribute('addrtype') === type);
+      return found || null;
+    }
+    return list[0] || null;
+  }
+
+  function getHostnames(host) {
+    return [...host.querySelectorAll(':scope > hostnames > hostname')]
+      .map(x => x.getAttribute('name') || '')
+      .filter(Boolean)
+      .join('; ');
+  }
+
+  function getBestOS(host) {
+    const matches = [...host.querySelectorAll(':scope > os > osmatch')];
+    if (!matches.length) return { name: '', accuracy: '' };
+
+    matches.sort((a, b) =>
+      Number(b.getAttribute('accuracy') || 0) - Number(a.getAttribute('accuracy') || 0)
+    );
+
+    return {
+      name: matches[0].getAttribute('name') || '',
+      accuracy: matches[0].getAttribute('accuracy') || ''
+    };
+  }
+
+  function parseNmapXml(xmlText) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, 'application/xml');
+
+    const parserError = doc.querySelector('parsererror');
+    if (parserError) {
+      throw new Error('XML 파싱 실패: ' + parserError.textContent.trim().slice(0, 300));
+    }
+
+    if (!doc.documentElement || doc.documentElement.nodeName !== 'nmaprun') {
+      throw new Error('Nmap XML 루트 요소 <nmaprun>을 찾지 못했습니다.');
+    }
+
+    const out = [];
+    const hosts = [...doc.querySelectorAll('nmaprun > host')];
+
+    for (const host of hosts) {
+      const ipv4Node = getFirstAddress(host, 'ipv4') || getFirstAddress(host);
+      const macNode = getFirstAddress(host, 'mac');
+
+      const ip = ipv4Node ? ipv4Node.getAttribute('addr') || '' : '';
+      const mac = macNode ? macNode.getAttribute('addr') || '' : '';
+      const macVendor = macNode ? macNode.getAttribute('vendor') || '' : '';
+      const hostname = getHostnames(host);
+      const os = getBestOS(host);
+
+      const ports = [...host.querySelectorAll(':scope > ports > port')];
+
+      for (const port of ports) {
+        const stateNode = port.querySelector(':scope > state');
+        const serviceNode = port.querySelector(':scope > service');
+
+        const cpes = serviceNode
+          ? [...serviceNode.querySelectorAll(':scope > cpe')]
+              .map(x => (x.textContent || '').trim())
+              .filter(Boolean)
+              .join('; ')
+          : '';
+
+        out.push({
+          IP: ip,
+          Hostname: hostname,
+          MAC: mac,
+          MACVendor: macVendor,
+          Port: port.getAttribute('portid') || '',
+          Protocol: port.getAttribute('protocol') || '',
+          State: stateNode ? stateNode.getAttribute('state') || '' : '',
+          Service: serviceNode ? serviceNode.getAttribute('name') || '' : '',
+          Product: serviceNode ? serviceNode.getAttribute('product') || '' : '',
+          Version: serviceNode ? serviceNode.getAttribute('version') || '' : '',
+          ExtraInfo: serviceNode ? serviceNode.getAttribute('extrainfo') || '' : '',
+          CPE: cpes,
+          OS: os.name,
+          OSAccuracy: os.accuracy
+        });
+      }
+    }
+
+    return { rows: out, hostCount: hosts.length };
+  }
+
+  function naturalCompare(a, b) {
+    const av = a ?? '';
+    const bv = b ?? '';
+
+    if (sortKey === 'Port' || sortKey === 'OSAccuracy') {
+      return Number(av || 0) - Number(bv || 0);
+    }
+
+    if (sortKey === 'IP') {
+      const pa = String(av).split('.').map(Number);
+      const pb = String(bv).split('.').map(Number);
+      if (pa.length === 4 && pb.length === 4 && pa.every(Number.isFinite) && pb.every(Number.isFinite)) {
+        for (let i = 0; i < 4; i++) {
+          if (pa[i] !== pb[i]) return pa[i] - pb[i];
+        }
+        return 0;
+      }
+    }
+
+    return String(av).localeCompare(String(bv), 'ko', { numeric: true, sensitivity: 'base' });
+  }
+
+  function applyFilters() {
+    const state = stateFilter.value.trim().toLowerCase();
+    const hostQ = hostFilter.value.trim().toLowerCase();
+    const portQ = portFilter.value.trim();
+    const serviceQ = serviceFilter.value.trim().toLowerCase();
+
+    filteredRows = rows.filter(r => {
+      if (state && String(r.State).toLowerCase() !== state) return false;
+
+      if (hostQ) {
+        const hay = `${r.IP} ${r.Hostname} ${r.MAC} ${r.MACVendor}`.toLowerCase();
+        if (!hay.includes(hostQ)) return false;
+      }
+
+      if (portQ && String(r.Port) !== portQ) return false;
+
+      if (serviceQ) {
+        const hay = `${r.Service} ${r.Product} ${r.Version} ${r.ExtraInfo} ${r.CPE}`.toLowerCase();
+        if (!hay.includes(serviceQ)) return false;
+      }
+
+      return true;
+    });
+
+    filteredRows.sort((a, b) => {
+      const v = naturalCompare(a[sortKey], b[sortKey]);
+      return sortAsc ? v : -v;
+    });
+
+    render();
+  }
+
+  function render() {
+    const fragment = document.createDocumentFragment();
+
+    for (const r of filteredRows) {
+      const tr = document.createElement('tr');
+      const columns = [
+        'IP','Hostname','MAC','MACVendor','Port','Protocol','State',
+        'Service','Product','Version','ExtraInfo','CPE','OS','OSAccuracy'
+      ];
+
+      for (const c of columns) {
+        const td = document.createElement('td');
+        td.textContent = r[c] ?? '';
+        if (['Hostname','Product','ExtraInfo','CPE','OS'].includes(c)) td.classList.add('wrap');
+        tr.appendChild(td);
+      }
+
+      fragment.appendChild(tr);
+    }
+
+    resultBody.replaceChildren(fragment);
+    renderSummary();
+
+    filteredCount.textContent = filteredRows.length.toLocaleString();
+    serviceCount.textContent = new Set(
+      filteredRows.map(r => `${r.Service}|${r.Port}|${r.Protocol}`).filter(x => !x.startsWith('|'))
+    ).size.toLocaleString();
+  }
+
+  function renderSummary() {
+    const map = new Map();
+
+    for (const r of filteredRows) {
+      const key = `${r.Service}|${r.Port}|${r.Protocol}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          service: r.Service || '',
+          port: r.Port || '',
+          protocol: r.Protocol || '',
+          ips: new Set()
+        });
+      }
+      if (r.IP) map.get(key).ips.add(r.IP);
+    }
+
+    const list = [...map.values()]
+      .map(x => ({
+        ...x,
+        hosts: x.ips.size,
+        ipList: [...x.ips].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      }))
+      .sort((a, b) => {
+        const s = a.service.localeCompare(b.service, 'ko', { sensitivity: 'base' });
+        if (s !== 0) return s;
+        return Number(a.port || 0) - Number(b.port || 0);
+      });
+
+    const fragment = document.createDocumentFragment();
+
+    for (const s of list) {
+      const tr = document.createElement('tr');
+
+      const values = [
+        s.service,
+        s.port,
+        s.protocol,
+        String(s.hosts),
+        s.ipList.join('; ')
+      ];
+
+      values.forEach((v, idx) => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        if (idx === 4) td.classList.add('wrap');
+        tr.appendChild(td);
+      });
+
+      fragment.appendChild(tr);
+    }
+
+    summaryBody.replaceChildren(fragment);
+  }
+
+  function csvEscape(value) {
+    const s = String(value ?? '');
+    return '"' + s.replaceAll('"', '""') + '"';
+  }
+
+  function downloadCsv(data, suffix) {
+    const cols = [
+      'IP','Hostname','MAC','MACVendor','Port','Protocol','State',
+      'Service','Product','Version','ExtraInfo','CPE','OS','OSAccuracy'
+    ];
+
+    const lines = [cols.map(csvEscape).join(',')];
+
+    for (const r of data) {
+      lines.push(cols.map(c => csvEscape(r[c])).join(','));
+    }
+
+    const csv = '\ufeff' + lines.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    const base = sourceFileName.replace(/\.xml$/i, '') || 'nmap';
+    a.href = url;
+    a.download = `${base}-${suffix}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function loadFile(file) {
+    if (!file) return;
+    sourceFileName = file.name;
+
+    statusEl.className = 'status';
+    statusEl.textContent = `읽는 중: ${file.name}`;
+
+    try {
+      const xmlText = await file.text();
+      const parsed = parseNmapXml(xmlText);
+
+      rows = parsed.rows;
+      hostCount.textContent = parsed.hostCount.toLocaleString();
+      rowCount.textContent = rows.length.toLocaleString();
+
+      csvBtn.disabled = rows.length === 0;
+      allCsvBtn.disabled = rows.length === 0;
+
+      statusEl.className = 'status ok';
+      statusEl.textContent = `완료: ${file.name} — 호스트 ${parsed.hostCount.toLocaleString()}개, 포트 행 ${rows.length.toLocaleString()}개`;
+
+      applyFilters();
+    } catch (e) {
+      rows = [];
+      filteredRows = [];
+      resultBody.replaceChildren();
+      summaryBody.replaceChildren();
+      hostCount.textContent = '0';
+      rowCount.textContent = '0';
+      filteredCount.textContent = '0';
+      serviceCount.textContent = '0';
+      csvBtn.disabled = true;
+      allCsvBtn.disabled = true;
+
+      statusEl.className = 'status error';
+      statusEl.textContent = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  fileInput.addEventListener('change', () => loadFile(fileInput.files[0]));
+
+  for (const el of [stateFilter, hostFilter, portFilter, serviceFilter]) {
+    el.addEventListener('input', applyFilters);
+    el.addEventListener('change', applyFilters);
+  }
+
+  resetBtn.addEventListener('click', () => {
+    stateFilter.value = 'open';
+    hostFilter.value = '';
+    portFilter.value = '';
+    serviceFilter.value = '';
+    sortKey = 'IP';
+    sortAsc = true;
+    applyFilters();
+  });
+
+  csvBtn.addEventListener('click', () => downloadCsv(filteredRows, 'filtered'));
+  allCsvBtn.addEventListener('click', () => downloadCsv(rows, 'all'));
+
+  document.querySelectorAll('#resultTable th[data-key]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (sortKey === key) sortAsc = !sortAsc;
+      else {
+        sortKey = key;
+        sortAsc = true;
+      }
+      applyFilters();
+    });
+  });
+
+  ['dragenter','dragover'].forEach(type => {
+    dropzone.addEventListener(type, e => {
+      e.preventDefault();
+      dropzone.classList.add('drag');
+    });
+  });
+
+  ['dragleave','drop'].forEach(type => {
+    dropzone.addEventListener(type, e => {
+      e.preventDefault();
+      dropzone.classList.remove('drag');
+    });
+  });
+
+  dropzone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files?.[0];
+    if (file) loadFile(file);
+  });
+})();
+</script>
+</body>
+</html>

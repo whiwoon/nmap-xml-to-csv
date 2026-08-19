@@ -231,11 +231,23 @@
   <section class="panel">
     <h2 class="section-title">요약</h2>
     <div class="summary-grid">
-      <div class="metric"><div class="label">호스트</div><div id="hostCount" class="value">0</div></div>
-      <div class="metric"><div class="label">포트 행</div><div id="rowCount" class="value">0</div></div>
+      <div class="metric"><div class="label">Up Hosts</div><div id="upHostCount" class="value">0</div></div>
+      <div class="metric"><div class="label">Open Port Hosts</div><div id="openHostCount" class="value">0</div></div>
+      <div class="metric"><div class="label">Open Ports</div><div id="openPortCount" class="value">0</div></div>
       <div class="metric"><div class="label">현재 필터 결과</div><div id="filteredCount" class="value">0</div></div>
       <div class="metric"><div class="label">서비스 종류</div><div id="serviceCount" class="value">0</div></div>
     </div>
+  </section>
+
+  <section class="panel">
+    <h2 class="section-title">Open 포트가 없는 Up 호스트</h2>
+    <div class="table-wrap" style="max-height: 30vh;">
+      <table id="noOpenHostTable">
+        <thead><tr><th>IP</th><th>Hostname</th><th>MAC</th><th>MACVendor</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div id="noOpenHostHint" class="hint">XML에서 state="up"이지만 open 포트가 없는 호스트를 표시합니다.</div>
   </section>
 
   <section class="panel">
@@ -302,13 +314,17 @@
   const csvBtn = document.getElementById('csvBtn');
   const allCsvBtn = document.getElementById('allCsvBtn');
 
-  const hostCount = document.getElementById('hostCount');
-  const rowCount = document.getElementById('rowCount');
+  const upHostCount = document.getElementById('upHostCount');
+  const openHostCount = document.getElementById('openHostCount');
+  const openPortCount = document.getElementById('openPortCount');
   const filteredCount = document.getElementById('filteredCount');
   const serviceCount = document.getElementById('serviceCount');
+  const noOpenHostBody = document.querySelector('#noOpenHostTable tbody');
+  const noOpenHostHint = document.getElementById('noOpenHostHint');
 
   let rows = [];
   let filteredRows = [];
+  let noOpenHosts = [];
   let sourceFileName = 'nmap';
 
   let sortKey = 'IP';
@@ -353,62 +369,54 @@
   function parseNmapXml(xmlText) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlText, 'application/xml');
-
     const parserError = doc.querySelector('parsererror');
-    if (parserError) {
-      throw new Error('XML 파싱 실패: ' + parserError.textContent.trim().slice(0, 300));
-    }
-
-    if (!doc.documentElement || doc.documentElement.nodeName !== 'nmaprun') {
-      throw new Error('Nmap XML 루트 요소 <nmaprun>을 찾지 못했습니다.');
-    }
+    if (parserError) throw new Error('XML 파싱 실패: ' + parserError.textContent.trim().slice(0, 300));
+    if (!doc.documentElement || doc.documentElement.nodeName !== 'nmaprun') throw new Error('Nmap XML 루트 요소 <nmaprun>을 찾지 못했습니다.');
 
     const out = [];
+    const noOpen = [];
     const hosts = [...doc.querySelectorAll('nmaprun > host')];
+    let upCount = 0, openHostCount = 0, openPortCount = 0;
 
     for (const host of hosts) {
+      const statusNode = host.querySelector(':scope > status');
+      const isUp = !!statusNode && (statusNode.getAttribute('state') || '').toLowerCase() === 'up';
       const ipv4Node = getFirstAddress(host, 'ipv4') || getFirstAddress(host);
       const macNode = getFirstAddress(host, 'mac');
-
       const ip = ipv4Node ? ipv4Node.getAttribute('addr') || '' : '';
       const mac = macNode ? macNode.getAttribute('addr') || '' : '';
       const macVendor = macNode ? macNode.getAttribute('vendor') || '' : '';
       const hostname = getHostnames(host);
       const os = getBestOS(host);
-
       const ports = [...host.querySelectorAll(':scope > ports > port')];
+      const openPortsForHost = ports.filter(port => {
+        const st = port.querySelector(':scope > state');
+        return !!st && (st.getAttribute('state') || '').toLowerCase() === 'open';
+      });
+
+      if (isUp) {
+        upCount++;
+        if (openPortsForHost.length > 0) { openHostCount++; openPortCount += openPortsForHost.length; }
+        else noOpen.push({ IP: ip, Hostname: hostname, MAC: mac, MACVendor: macVendor });
+      }
 
       for (const port of ports) {
         const stateNode = port.querySelector(':scope > state');
         const serviceNode = port.querySelector(':scope > service');
-
-        const cpes = serviceNode
-          ? [...serviceNode.querySelectorAll(':scope > cpe')]
-              .map(x => (x.textContent || '').trim())
-              .filter(Boolean)
-              .join('; ')
-          : '';
-
+        const cpes = serviceNode ? [...serviceNode.querySelectorAll(':scope > cpe')].map(x => (x.textContent || '').trim()).filter(Boolean).join('; ') : '';
         out.push({
-          IP: ip,
-          Hostname: hostname,
-          MAC: mac,
-          MACVendor: macVendor,
-          Port: port.getAttribute('portid') || '',
-          Protocol: port.getAttribute('protocol') || '',
+          IP: ip, Hostname: hostname, MAC: mac, MACVendor: macVendor,
+          Port: port.getAttribute('portid') || '', Protocol: port.getAttribute('protocol') || '',
           State: stateNode ? stateNode.getAttribute('state') || '' : '',
           Service: serviceNode ? serviceNode.getAttribute('name') || '' : '',
           Product: serviceNode ? serviceNode.getAttribute('product') || '' : '',
           Version: serviceNode ? serviceNode.getAttribute('version') || '' : '',
           ExtraInfo: serviceNode ? serviceNode.getAttribute('extrainfo') || '' : '',
-          CPE: cpes,
-          OS: os.name,
-          OSAccuracy: os.accuracy
+          CPE: cpes, OS: os.name, OSAccuracy: os.accuracy
         });
       }
     }
-
-    return { rows: out, hostCount: hosts.length };
+    return { rows: out, upHostCount: upCount, openHostCount, openPortCount, noOpenHosts: noOpen };
   }
 
   function naturalCompare(a, b) {
@@ -487,11 +495,28 @@
 
     resultBody.replaceChildren(fragment);
     renderSummary();
+    renderNoOpenHosts();
 
     filteredCount.textContent = filteredRows.length.toLocaleString();
     serviceCount.textContent = new Set(
       filteredRows.map(r => `${r.Service}|${r.Port}|${r.Protocol}`).filter(x => !x.startsWith('|'))
     ).size.toLocaleString();
+  }
+
+  function renderNoOpenHosts() {
+    const fragment = document.createDocumentFragment();
+    const sorted = [...noOpenHosts].sort((a,b) => String(a.IP).localeCompare(String(b.IP), undefined, {numeric:true}));
+    for (const h of sorted) {
+      const tr = document.createElement('tr');
+      [h.IP, h.Hostname, h.MAC, h.MACVendor].forEach((v, idx) => {
+        const td = document.createElement('td'); td.textContent = v || '';
+        if (idx === 1 || idx === 3) td.classList.add('wrap');
+        tr.appendChild(td);
+      });
+      fragment.appendChild(tr);
+    }
+    noOpenHostBody.replaceChildren(fragment);
+    noOpenHostHint.textContent = `XML에서 state="up"이지만 open 포트가 없는 호스트: ${noOpenHosts.length.toLocaleString()}개`;
   }
 
   function renderSummary() {
@@ -592,23 +617,28 @@
       const parsed = parseNmapXml(xmlText);
 
       rows = parsed.rows;
-      hostCount.textContent = parsed.hostCount.toLocaleString();
-      rowCount.textContent = rows.length.toLocaleString();
+      noOpenHosts = parsed.noOpenHosts;
+      upHostCount.textContent = parsed.upHostCount.toLocaleString();
+      openHostCount.textContent = parsed.openHostCount.toLocaleString();
+      openPortCount.textContent = parsed.openPortCount.toLocaleString();
 
       csvBtn.disabled = rows.length === 0;
       allCsvBtn.disabled = rows.length === 0;
 
       statusEl.className = 'status ok';
-      statusEl.textContent = `완료: ${file.name} — 호스트 ${parsed.hostCount.toLocaleString()}개, 포트 행 ${rows.length.toLocaleString()}개`;
+      statusEl.textContent = `완료: ${file.name} — Up Hosts ${parsed.upHostCount.toLocaleString()}개, Open Port Hosts ${parsed.openHostCount.toLocaleString()}개, Open Ports ${parsed.openPortCount.toLocaleString()}개`;
 
       applyFilters();
     } catch (e) {
       rows = [];
       filteredRows = [];
+      noOpenHosts = [];
       resultBody.replaceChildren();
       summaryBody.replaceChildren();
-      hostCount.textContent = '0';
-      rowCount.textContent = '0';
+      noOpenHostBody.replaceChildren();
+      upHostCount.textContent = '0';
+      openHostCount.textContent = '0';
+      openPortCount.textContent = '0';
       filteredCount.textContent = '0';
       serviceCount.textContent = '0';
       csvBtn.disabled = true;

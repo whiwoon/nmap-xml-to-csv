@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<nmaprun scanner="nmap" args="nmap -sV -O -oA scan 10.0.0.1" start="1700000000" version="7.95" xmloutputversion="1.05">
+  <host>
+    <status state="up" reason="syn-ack" reason_ttl="64" />
+    <address addr="10.0.0.1" addrtype="ipv4" />
+    <address addr="00:11:22:33:44:55" addrtype="mac" vendor="Example Vendor" />
+    <hostnames><hostname name="server.example.test" type="PTR" /></hostnames>
+    <ports>
+      <port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64" /><service name="ssh" product="OpenSSH" version="9.0" extrainfo="protocol 2.0"><cpe>cpe:/a:openbsd:openssh:9.0</cpe></service></port>
+      <port protocol="tcp" portid="80"><state state="closed" reason="reset" reason_ttl="64" /><service name="http" /></port>
+    </ports>
+    <os><osmatch name="Linux 6.x" accuracy="98" line="1" /></os>
+  </host>
+  <runstats><finished time="1700000010" elapsed="10.00" /><hosts up="1" down="0" total="1" /></runstats>
+</nmaprun>

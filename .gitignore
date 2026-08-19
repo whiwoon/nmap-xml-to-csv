@@ -1,0 +1,9 @@
+# Generated conversion results
+*-ports.csv
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

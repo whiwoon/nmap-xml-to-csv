@@ -52,15 +52,12 @@ nmap -sV -O -oA scan 10.0.0.1
 `nmap-xml-viewer.html`을 브라우저로 열면 설치 없이 Nmap XML을 로컬에서 조회할 수 있습니다.
 
 - XML 파일을 선택하거나 끌어다 놓기
-- Up Hosts, Open Port Hosts, Open Ports 및 제외된 Zenmap `hosthint` 수 요약
-- open 포트가 없는 Up 호스트 목록
-- 상태·IP/호스트명·포트·서비스 필터링
-- 서비스별 호스트 수 요약
-- 현재 필터 결과 또는 전체 결과를 UTF-8 BOM CSV로 저장
-- 중단된 순차 대상 스캔을 위한 수동 resume 대상 목록 생성
-  - 원래 대상 범위와 XML의 실제 `<host>`를 비교해 체크포인트를 계산합니다.
-  - 기본값은 최대 1024개를 중복 재스캔하는 보수적 재개입니다.
-  - `--randomize-hosts` 또는 `-iR`을 사용한 스캔에는 적용하지 마세요.
+- XML에 기록된 Nmap 명령과 XML 완료/중단 상태 판정
+- 포트 단위 CSV 미리보기 및 UTF-8 BOM CSV 저장
+- 중단/손상된 XML에서 완전히 닫힌 `<host>` 결과만 회수
+- 원래 명령의 IPv4 대상 범위에서 완료된 host를 제외한 보수적 재스캔 IP TXT 저장
+  - Nmap의 host-group 진행 상태와 down host는 XML만으로 완전히 복원할 수 없으므로, 일부 이미 처리된 IP를 포함해 누락을 방지합니다.
+  - `-iL` 또는 `-iR`을 사용한 명령은 원래 대상 목록을 XML만으로 복원할 수 없어 지원하지 않습니다.
 
 뷰어는 선택한 XML을 브라우저 안에서만 처리하며 외부로 업로드하지 않습니다.
 

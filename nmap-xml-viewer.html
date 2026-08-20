@@ -1,329 +1,159 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Nmap XML Viewer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nmap Helper</title>
 <style>
   :root {
-    color-scheme: light dark;
-    --bg: #f6f7f9;
-    --panel: #ffffff;
-    --text: #1d2329;
-    --muted: #65707c;
-    --border: #d7dce2;
-    --accent: #2f6fed;
-    --accent2: #e8efff;
-    --row-alt: #fafbfc;
-    --danger: #b42318;
-    --success: #067647;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #121417;
-      --panel: #1a1d21;
-      --text: #eef1f4;
-      --muted: #a9b1bb;
-      --border: #343a40;
-      --accent: #7aa2ff;
-      --accent2: #1f2a44;
-      --row-alt: #16191d;
-      --danger: #ff8a80;
-      --success: #6ce9a6;
-    }
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #111;
+    background: #f5f5f5;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-  }
-  header {
-    padding: 20px 24px 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
-    position: sticky;
-    top: 0;
-    z-index: 5;
-  }
-  h1 { margin: 0 0 6px; font-size: 22px; }
-  .sub { color: var(--muted); font-size: 13px; }
-  main { padding: 18px 24px 36px; }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
+  body { margin: 0; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px; }
+  h1 { margin: 0 0 6px; font-size: 24px; }
+  p { margin: 6px 0; line-height: 1.5; }
+  .box {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
     padding: 16px;
-    margin-bottom: 16px;
+    margin-top: 16px;
   }
-  .controls {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 10px;
-    align-items: end;
-  }
-  label {
+  .row {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--muted);
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
   }
-  input[type="text"], input[type="number"], select {
-    width: 100%;
-    padding: 9px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--panel);
-    color: var(--text);
-  }
-  input[type="file"] {
-    width: 100%;
+  button, input[type=file] {
+    font: inherit;
   }
   button {
-    border: 1px solid var(--border);
-    background: var(--panel);
-    color: var(--text);
-    padding: 9px 12px;
-    border-radius: 8px;
+    padding: 9px 14px;
+    border: 1px solid #bbb;
+    border-radius: 7px;
+    background: #fff;
     cursor: pointer;
   }
   button.primary {
-    background: var(--accent);
+    background: #1769e0;
     color: white;
-    border-color: var(--accent);
+    border-color: #1769e0;
   }
-  button:hover { filter: brightness(0.98); }
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+  button:disabled {
+    opacity: .45;
+    cursor: default;
+  }
+  #drop {
     margin-top: 12px;
+    border: 2px dashed #bbb;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    color: #666;
   }
+  #drop.drag { border-color: #1769e0; background: #eef5ff; }
   .status {
     margin-top: 12px;
-    font-size: 13px;
-    color: var(--muted);
+    padding: 10px 12px;
+    background: #f7f7f7;
+    border-radius: 7px;
+    white-space: pre-wrap;
   }
-  .status.error { color: var(--danger); }
-  .status.ok { color: var(--success); }
-  .summary-grid {
+  .ok { color: #05603a; }
+  .warn { color: #8a4b08; }
+  .err { color: #b42318; }
+  .metrics {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
+    margin-top: 12px;
   }
   .metric {
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
   }
-  .metric .label { color: var(--muted); font-size: 12px; }
-  .metric .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
-  .table-wrap {
-    overflow: auto;
-    max-height: 68vh;
-    border: 1px solid var(--border);
-    border-radius: 10px;
+  .metric b { display:block; font-size: 21px; margin-top: 4px; }
+  .small { color:#666; font-size: 13px; }
+  code, pre {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  pre {
+    overflow:auto;
+    background:#f7f7f7;
+    padding:10px;
+    border-radius:7px;
+    white-space:pre-wrap;
+    word-break:break-word;
   }
   table {
     border-collapse: collapse;
     width: 100%;
-    min-width: 1200px;
-    font-size: 12px;
+    margin-top: 10px;
+    font-size: 13px;
   }
   th, td {
-    border-bottom: 1px solid var(--border);
-    padding: 8px 9px;
     text-align: left;
-    vertical-align: top;
-    white-space: nowrap;
+    border-bottom: 1px solid #e3e3e3;
+    padding: 7px 8px;
   }
-  th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background: var(--panel);
-    cursor: pointer;
-    user-select: none;
-  }
-  tbody tr:nth-child(even) td { background: var(--row-alt); }
-  td.wrap { white-space: normal; min-width: 180px; max-width: 360px; }
-  .section-title {
-    margin: 0 0 12px;
-    font-size: 17px;
-  }
-  .hint {
-    color: var(--muted);
-    font-size: 12px;
-    margin-top: 8px;
-  }
-  .pill {
-    display: inline-block;
-    padding: 2px 7px;
-    border-radius: 999px;
-    background: var(--accent2);
-    color: var(--text);
-    font-size: 11px;
-  }
-  .dropzone {
-    border: 2px dashed var(--border);
-    border-radius: 10px;
-    padding: 18px;
-    text-align: center;
-    color: var(--muted);
-    margin-top: 10px;
-  }
-  .dropzone.drag { border-color: var(--accent); background: var(--accent2); }
+  th { background:#fafafa; position:sticky; top:0; }
+  .tablewrap { max-height: 360px; overflow:auto; border:1px solid #ddd; border-radius:8px; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Nmap XML Viewer</h1>
-  <div class="sub">Nmap <code>-oX</code> / <code>-oA</code> XML을 브라우저에서 로컬 처리합니다. 파일은 외부로 업로드되지 않습니다.</div>
-</header>
-
 <main>
-  <section class="panel">
-    <div class="controls">
-      <label>
-        Nmap XML 파일
-        <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" />
-      </label>
+  <h1>Nmap Helper</h1>
+  <p class="small">Nmap XML을 로컬 브라우저에서 처리합니다. 파일은 외부로 전송하지 않습니다.</p>
 
-      <label>
-        상태
-        <select id="stateFilter">
-          <option value="open" selected>open만</option>
-          <option value="">전체 상태</option>
-          <option value="open|filtered">open|filtered</option>
-          <option value="filtered">filtered</option>
-          <option value="closed">closed</option>
-        </select>
-      </label>
-
-      <label>
-        IP / Hostname 검색
-        <input id="hostFilter" type="text" placeholder="예: 10.96.2.10 또는 server01" />
-      </label>
-
-      <label>
-        Port
-        <input id="portFilter" type="text" placeholder="예: 443" />
-      </label>
-
-      <label>
-        Service / Product 검색
-        <input id="serviceFilter" type="text" placeholder="예: http, ssh, nginx" />
-      </label>
+  <section class="box">
+    <div class="row">
+      <input id="file" type="file" accept=".xml,text/xml,application/xml">
+      <button id="csvBtn" class="primary" disabled>CSV 저장</button>
+      <button id="remainBtn" class="primary" disabled>재스캔 IP TXT 저장</button>
     </div>
-
-    <div class="toolbar">
-      <button id="resetBtn">필터 초기화</button>
-      <button id="csvBtn" class="primary" disabled>현재 결과 CSV 저장</button>
-      <button id="allCsvBtn" disabled>전체 결과 CSV 저장</button>
-    </div>
-
-    <div id="dropzone" class="dropzone">XML 파일을 여기로 끌어다 놓아도 됩니다.</div>
-    <div id="status" class="status">XML 파일을 선택하세요.</div>
+    <div id="drop">XML 파일을 선택하거나 여기에 끌어다 놓으세요.</div>
+    <div id="status" class="status">파일을 선택하세요.</div>
   </section>
 
-  <section class="panel">
-    <h2 class="section-title">요약</h2>
-    <div class="summary-grid">
-      <div class="metric"><div class="label">Up Hosts</div><div id="upHostCount" class="value">0</div></div>
-      <div class="metric"><div class="label">Open Port Hosts</div><div id="openHostCount" class="value">0</div></div>
-      <div class="metric"><div class="label">제외된 Host Hints</div><div id="hostHintCount" class="value">0</div></div>
-      <div class="metric"><div class="label">Open Ports</div><div id="openPortCount" class="value">0</div></div>
-      <div class="metric"><div class="label">현재 필터 결과</div><div id="filteredCount" class="value">0</div></div>
-      <div class="metric"><div class="label">서비스 종류</div><div id="serviceCount" class="value">0</div></div>
+  <section class="box">
+    <strong>판정</strong>
+    <div class="metrics">
+      <div class="metric">XML 상태<b id="xmlState">-</b></div>
+      <div class="metric">완료 Host 요소<b id="hostCount">0</b></div>
+      <div class="metric">Open 포트<b id="portCount">0</b></div>
+      <div class="metric">원래 대상 IP<b id="targetCount">0</b></div>
+      <div class="metric">재스캔 IP<b id="remainCount">0</b></div>
     </div>
   </section>
 
-  <section class="panel">
-    <h2 class="section-title">Open 포트가 없는 Up 호스트</h2>
-    <div class="table-wrap" style="max-height: 30vh;">
-      <table id="noOpenHostTable">
-        <thead><tr><th>IP</th><th>Hostname</th><th>MAC</th><th>MACVendor</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div id="noOpenHostHint" class="hint">XML에서 state="up"이지만 open 포트가 없는 호스트를 표시합니다.</div>
+  <section class="box">
+    <strong>XML에 기록된 Nmap 명령</strong>
+    <pre id="command">-</pre>
+    <p class="small">
+      중단된 XML에서는 Nmap의 내부 host-group 진행상태를 완전히 복원할 수 없습니다.
+      따라서 재스캔 목록은 <b>원래 대상 전체 - XML에 완전히 닫힌 &lt;host&gt; 결과</b>로 계산합니다.
+      이미 처리된 down 호스트 등이 다시 포함될 수 있지만, 누락을 피하는 보수적인 방식입니다.
+    </p>
   </section>
 
-  <section class="panel">
-    <h2 class="section-title">수동 Resume 도우미</h2>
-    <div class="controls">
-      <label style="grid-column: 1 / -1;">
-        원래 Nmap 대상 범위
-        <textarea id="resumeTargets" rows="4" placeholder="예: 10.96.2.0-255 10.96.10-11.0-255 10.96.13-26.0-255" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);resize:vertical;"></textarea>
-      </label>
-      <label>
-        안전 재스캔 개수
-        <input id="resumeOverlap" type="number" value="1024" min="0" step="1" />
-      </label>
-      <label>
-        재개 방식
-        <select id="resumeMode">
-          <option value="safe" selected>보수적 재개</option>
-          <option value="exact">마지막 기록 IP 다음부터</option>
-        </select>
-      </label>
-    </div>
-    <div class="toolbar">
-      <button id="makeRemainingBtn" class="primary" disabled>남은 IP 목록 계산</button>
-      <button id="downloadRemainingBtn" disabled>targets_remaining.txt 저장</button>
-    </div>
-    <div id="resumeStatus" class="status">먼저 Nmap XML을 불러온 뒤 원래 대상 범위를 입력하세요.</div>
-    <div class="hint">
-      보수적 재개는 XML의 실제 &lt;host&gt; 중 원래 대상 순서상 가장 뒤의 IP를 기준점으로 잡고 기본 1024개 앞부터 다시 포함합니다.
-      Nmap은 기본 설정에서 host group이 상황에 따라 최대 1024까지 커질 수 있어, 중단 당시 병렬 처리 중이던 묶음을 놓치지 않기 위한 방식입니다.
-      <code>--randomize-hosts</code> 또는 <code>-iR</code>을 쓴 스캔에는 사용하지 마세요.
-    </div>
-  </section>
-
-  <section class="panel">
-    <h2 class="section-title">서비스별 요약</h2>
-    <div class="table-wrap" style="max-height: 34vh;">
-      <table id="serviceSummaryTable">
+  <section class="box" id="previewBox" hidden>
+    <strong>CSV 미리보기</strong>
+    <div class="tablewrap">
+      <table>
         <thead>
           <tr>
-            <th data-summary-key="service">Service</th>
-            <th data-summary-key="port">Port</th>
-            <th data-summary-key="protocol">Protocol</th>
-            <th data-summary-key="hosts">Hosts</th>
-            <th>IP 목록</th>
+            <th>IP</th><th>Hostname</th><th>MAC</th><th>MACVendor</th>
+            <th>Port</th><th>Protocol</th><th>State</th><th>Service</th>
+            <th>Product</th><th>Version</th><th>ExtraInfo</th><th>CPE</th>
+            <th>OS</th><th>OSAccuracy</th>
           </tr>
         </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="hint">서비스 요약은 현재 필터 결과를 기준으로 계산합니다.</div>
-  </section>
-
-  <section class="panel">
-    <h2 class="section-title">포트 상세</h2>
-    <div class="table-wrap">
-      <table id="resultTable">
-        <thead>
-          <tr>
-            <th data-key="IP">IP</th>
-            <th data-key="Hostname">Hostname</th>
-            <th data-key="MAC">MAC</th>
-            <th data-key="MACVendor">MACVendor</th>
-            <th data-key="Port">Port</th>
-            <th data-key="Protocol">Protocol</th>
-            <th data-key="State">State</th>
-            <th data-key="Service">Service</th>
-            <th data-key="Product">Product</th>
-            <th data-key="Version">Version</th>
-            <th data-key="ExtraInfo">ExtraInfo</th>
-            <th data-key="CPE">CPE</th>
-            <th data-key="OS">OS</th>
-            <th data-key="OSAccuracy">OSAccuracy</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
+        <tbody id="preview"></tbody>
       </table>
     </div>
   </section>
@@ -331,559 +161,361 @@
 
 <script>
 (() => {
-  const fileInput = document.getElementById('fileInput');
-  const dropzone = document.getElementById('dropzone');
-  const statusEl = document.getElementById('status');
-  const resultBody = document.querySelector('#resultTable tbody');
-  const summaryBody = document.querySelector('#serviceSummaryTable tbody');
-
-  const stateFilter = document.getElementById('stateFilter');
-  const hostFilter = document.getElementById('hostFilter');
-  const portFilter = document.getElementById('portFilter');
-  const serviceFilter = document.getElementById('serviceFilter');
-
-  const resetBtn = document.getElementById('resetBtn');
-  const csvBtn = document.getElementById('csvBtn');
-  const allCsvBtn = document.getElementById('allCsvBtn');
-
-  const upHostCount = document.getElementById('upHostCount');
-  const openHostCount = document.getElementById('openHostCount');
-  const hostHintCount = document.getElementById('hostHintCount');
-  const openPortCount = document.getElementById('openPortCount');
-  const filteredCount = document.getElementById('filteredCount');
-  const serviceCount = document.getElementById('serviceCount');
-  const noOpenHostBody = document.querySelector('#noOpenHostTable tbody');
-  const noOpenHostHint = document.getElementById('noOpenHostHint');
-  const resumeTargets = document.getElementById('resumeTargets');
-  const resumeOverlap = document.getElementById('resumeOverlap');
-  const resumeMode = document.getElementById('resumeMode');
-  const makeRemainingBtn = document.getElementById('makeRemainingBtn');
-  const downloadRemainingBtn = document.getElementById('downloadRemainingBtn');
-  const resumeStatus = document.getElementById('resumeStatus');
+  const $ = id => document.getElementById(id);
+  const fileInput = $('file');
+  const drop = $('drop');
+  const status = $('status');
+  const csvBtn = $('csvBtn');
+  const remainBtn = $('remainBtn');
 
   let rows = [];
-  let filteredRows = [];
-  let noOpenHosts = [];
-  let actualHostIPs = [];
-  let nmapArgs = '';
-  let remainingTargets = [];
-  let sourceFileName = 'nmap';
+  let remaining = [];
+  let sourceName = 'nmap';
 
-  let sortKey = 'IP';
-  let sortAsc = true;
+  const cols = [
+    'IP','Hostname','MAC','MACVendor','Port','Protocol','State',
+    'Service','Product','Version','ExtraInfo','CPE','OS','OSAccuracy'
+  ];
 
-  const text = (node, attr) => {
-    if (!node) return '';
-    if (attr) return node.getAttribute(attr) || '';
-    return (node.textContent || '').trim();
-  };
-
-  function getFirstAddress(host, type) {
-    const list = [...host.querySelectorAll(':scope > address')];
-    if (type) {
-      const found = list.find(x => x.getAttribute('addrtype') === type);
-      return found || null;
-    }
-    return list[0] || null;
+  function htmlDecode(s) {
+    const t = document.createElement('textarea');
+    t.innerHTML = s;
+    return t.value;
   }
 
-  function getHostnames(host) {
-    return [...host.querySelectorAll(':scope > hostnames > hostname')]
-      .map(x => x.getAttribute('name') || '')
-      .filter(Boolean)
-      .join('; ');
+  function extractStartTag(raw) {
+    const m = raw.match(/<nmaprun\b[\s\S]*?>/i);
+    return m ? m[0] : '';
   }
 
-  function getBestOS(host) {
-    const matches = [...host.querySelectorAll(':scope > os > osmatch')];
-    if (!matches.length) return { name: '', accuracy: '' };
-
-    matches.sort((a, b) =>
-      Number(b.getAttribute('accuracy') || 0) - Number(a.getAttribute('accuracy') || 0)
-    );
-
-    return {
-      name: matches[0].getAttribute('name') || '',
-      accuracy: matches[0].getAttribute('accuracy') || ''
-    };
+  function extractArgs(raw) {
+    const tag = extractStartTag(raw);
+    if (!tag) return '';
+    const m = tag.match(/\bargs\s*=\s*(["'])([\s\S]*?)\1/i);
+    return m ? htmlDecode(m[2]) : '';
   }
 
-  function parseNmapXml(xmlText) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlText, 'application/xml');
-    const parserError = doc.querySelector('parsererror');
-    if (parserError) throw new Error('XML 파싱 실패: ' + parserError.textContent.trim().slice(0, 300));
-    if (!doc.documentElement || doc.documentElement.nodeName !== 'nmaprun') throw new Error('Nmap XML 루트 요소 <nmaprun>을 찾지 못했습니다.');
-
+  function tokenize(cmd) {
     const out = [];
-    const noOpen = [];
-    // 실제 스캔 결과인 <host>만 처리합니다.
-    // Zenmap이 저장한 <hosthint>는 호스트 목록/요약/CSV에서 완전히 제외합니다.
-    const hosts = [...doc.documentElement.children].filter(
-      node => node.nodeName.toLowerCase() === 'host'
-    );
-    const hostHints = [...doc.documentElement.children].filter(
-      node => node.nodeName.toLowerCase() === 'hosthint'
-    );
-
-    const actualIPs = [];
-    const runArgs = doc.documentElement.getAttribute('args') || '';
-    let upCount = 0, openHostCount = 0, openPortCount = 0;
-
-    for (const host of hosts) {
-      const statusNode = host.querySelector(':scope > status');
-      const isUp = !!statusNode && (statusNode.getAttribute('state') || '').toLowerCase() === 'up';
-      const ipv4Node = getFirstAddress(host, 'ipv4') || getFirstAddress(host);
-      const macNode = getFirstAddress(host, 'mac');
-      const ip = ipv4Node ? ipv4Node.getAttribute('addr') || '' : '';
-      if (ip) actualIPs.push(ip);
-      const mac = macNode ? macNode.getAttribute('addr') || '' : '';
-      const macVendor = macNode ? macNode.getAttribute('vendor') || '' : '';
-      const hostname = getHostnames(host);
-      const os = getBestOS(host);
-      const ports = [...host.querySelectorAll(':scope > ports > port')];
-      const openPortsForHost = ports.filter(port => {
-        const st = port.querySelector(':scope > state');
-        return !!st && (st.getAttribute('state') || '').toLowerCase() === 'open';
-      });
-
-      if (isUp) {
-        upCount++;
-        if (openPortsForHost.length > 0) { openHostCount++; openPortCount += openPortsForHost.length; }
-        else noOpen.push({ IP: ip, Hostname: hostname, MAC: mac, MACVendor: macVendor });
-      }
-
-      for (const port of ports) {
-        const stateNode = port.querySelector(':scope > state');
-        const serviceNode = port.querySelector(':scope > service');
-        const cpes = serviceNode ? [...serviceNode.querySelectorAll(':scope > cpe')].map(x => (x.textContent || '').trim()).filter(Boolean).join('; ') : '';
-        out.push({
-          IP: ip, Hostname: hostname, MAC: mac, MACVendor: macVendor,
-          Port: port.getAttribute('portid') || '', Protocol: port.getAttribute('protocol') || '',
-          State: stateNode ? stateNode.getAttribute('state') || '' : '',
-          Service: serviceNode ? serviceNode.getAttribute('name') || '' : '',
-          Product: serviceNode ? serviceNode.getAttribute('product') || '' : '',
-          Version: serviceNode ? serviceNode.getAttribute('version') || '' : '',
-          ExtraInfo: serviceNode ? serviceNode.getAttribute('extrainfo') || '' : '',
-          CPE: cpes, OS: os.name, OSAccuracy: os.accuracy
-        });
+    let cur = '', quote = null;
+    for (let i=0; i<cmd.length; i++) {
+      const c = cmd[i];
+      if (quote) {
+        if (c === quote) quote = null;
+        else cur += c;
+      } else if (c === '"' || c === "'") {
+        quote = c;
+      } else if (/\s/.test(c)) {
+        if (cur) { out.push(cur); cur=''; }
+      } else {
+        cur += c;
       }
     }
-    return {
-      rows: out,
-      upHostCount: upCount,
-      openHostCount,
-      openPortCount,
-      hostHintCount: hostHints.length,
-      noOpenHosts: noOpen,
-      actualHostIPs: actualIPs,
-      nmapArgs: runArgs
-    };
+    if (cur) out.push(cur);
+    return out;
   }
 
-  function naturalCompare(a, b) {
-    const av = a ?? '';
-    const bv = b ?? '';
-
-    if (sortKey === 'Port' || sortKey === 'OSAccuracy') {
-      return Number(av || 0) - Number(bv || 0);
-    }
-
-    if (sortKey === 'IP') {
-      const pa = String(av).split('.').map(Number);
-      const pb = String(bv).split('.').map(Number);
-      if (pa.length === 4 && pb.length === 4 && pa.every(Number.isFinite) && pb.every(Number.isFinite)) {
-        for (let i = 0; i < 4; i++) {
-          if (pa[i] !== pb[i]) return pa[i] - pb[i];
-        }
-        return 0;
-      }
-    }
-
-    return String(av).localeCompare(String(bv), 'ko', { numeric: true, sensitivity: 'base' });
+  function looksLikeTarget(s) {
+    return /^(\d{1,3})(?:\.(?:\d{1,3}(?:-\d{1,3})?)){3}(?:\/\d{1,2})?$/.test(s);
   }
 
-  function applyFilters() {
-    const state = stateFilter.value.trim().toLowerCase();
-    const hostQ = hostFilter.value.trim().toLowerCase();
-    const portQ = portFilter.value.trim();
-    const serviceQ = serviceFilter.value.trim().toLowerCase();
-
-    filteredRows = rows.filter(r => {
-      if (state && String(r.State).toLowerCase() !== state) return false;
-
-      if (hostQ) {
-        const hay = `${r.IP} ${r.Hostname} ${r.MAC} ${r.MACVendor}`.toLowerCase();
-        if (!hay.includes(hostQ)) return false;
-      }
-
-      if (portQ && String(r.Port) !== portQ) return false;
-
-      if (serviceQ) {
-        const hay = `${r.Service} ${r.Product} ${r.Version} ${r.ExtraInfo} ${r.CPE}`.toLowerCase();
-        if (!hay.includes(serviceQ)) return false;
-      }
-
-      return true;
-    });
-
-    filteredRows.sort((a, b) => {
-      const v = naturalCompare(a[sortKey], b[sortKey]);
-      return sortAsc ? v : -v;
-    });
-
-    render();
-  }
-
-  function render() {
-    const fragment = document.createDocumentFragment();
-
-    for (const r of filteredRows) {
-      const tr = document.createElement('tr');
-      const columns = [
-        'IP','Hostname','MAC','MACVendor','Port','Protocol','State',
-        'Service','Product','Version','ExtraInfo','CPE','OS','OSAccuracy'
-      ];
-
-      for (const c of columns) {
-        const td = document.createElement('td');
-        td.textContent = r[c] ?? '';
-        if (['Hostname','Product','ExtraInfo','CPE','OS'].includes(c)) td.classList.add('wrap');
-        tr.appendChild(td);
-      }
-
-      fragment.appendChild(tr);
+  function extractTargets(args) {
+    const toks = tokenize(args);
+    const targets = [];
+    for (const t of toks) {
+      if (looksLikeTarget(t)) targets.push(t);
     }
-
-    resultBody.replaceChildren(fragment);
-    renderSummary();
-    renderNoOpenHosts();
-
-    filteredCount.textContent = filteredRows.length.toLocaleString();
-    serviceCount.textContent = new Set(
-      filteredRows.map(r => `${r.Service}|${r.Port}|${r.Protocol}`).filter(x => !x.startsWith('|'))
-    ).size.toLocaleString();
-  }
-
-  function renderNoOpenHosts() {
-    const fragment = document.createDocumentFragment();
-    const sorted = [...noOpenHosts].sort((a,b) => String(a.IP).localeCompare(String(b.IP), undefined, {numeric:true}));
-    for (const h of sorted) {
-      const tr = document.createElement('tr');
-      [h.IP, h.Hostname, h.MAC, h.MACVendor].forEach((v, idx) => {
-        const td = document.createElement('td'); td.textContent = v || '';
-        if (idx === 1 || idx === 3) td.classList.add('wrap');
-        tr.appendChild(td);
-      });
-      fragment.appendChild(tr);
-    }
-    noOpenHostBody.replaceChildren(fragment);
-    noOpenHostHint.textContent = `XML에서 state="up"이지만 open 포트가 없는 호스트: ${noOpenHosts.length.toLocaleString()}개`;
-  }
-
-  function renderSummary() {
-    const map = new Map();
-
-    for (const r of filteredRows) {
-      const key = `${r.Service}|${r.Port}|${r.Protocol}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          service: r.Service || '',
-          port: r.Port || '',
-          protocol: r.Protocol || '',
-          ips: new Set()
-        });
-      }
-      if (r.IP) map.get(key).ips.add(r.IP);
-    }
-
-    const list = [...map.values()]
-      .map(x => ({
-        ...x,
-        hosts: x.ips.size,
-        ipList: [...x.ips].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-      }))
-      .sort((a, b) => {
-        const s = a.service.localeCompare(b.service, 'ko', { sensitivity: 'base' });
-        if (s !== 0) return s;
-        return Number(a.port || 0) - Number(b.port || 0);
-      });
-
-    const fragment = document.createDocumentFragment();
-
-    for (const s of list) {
-      const tr = document.createElement('tr');
-
-      const values = [
-        s.service,
-        s.port,
-        s.protocol,
-        String(s.hosts),
-        s.ipList.join('; ')
-      ];
-
-      values.forEach((v, idx) => {
-        const td = document.createElement('td');
-        td.textContent = v;
-        if (idx === 4) td.classList.add('wrap');
-        tr.appendChild(td);
-      });
-
-      fragment.appendChild(tr);
-    }
-
-    summaryBody.replaceChildren(fragment);
+    return [...new Set(targets)];
   }
 
   function ipToInt(ip) {
-    const p = String(ip).trim().split('.').map(Number);
-    if (p.length !== 4 || p.some(x => !Number.isInteger(x) || x < 0 || x > 255)) throw new Error(`잘못된 IPv4 주소: ${ip}`);
-    return (((p[0] * 256 + p[1]) * 256 + p[2]) * 256 + p[3]);
+    const p = ip.split('.').map(Number);
+    if (p.length !== 4 || p.some(n => !Number.isInteger(n) || n < 0 || n > 255)) {
+      throw new Error('잘못된 IPv4: ' + ip);
+    }
+    return (((p[0] * 256 + p[1]) * 256 + p[2]) * 256 + p[3]) >>> 0;
   }
 
   function intToIp(n) {
-    const a = Math.floor(n / 16777216) % 256;
-    const b = Math.floor(n / 65536) % 256;
-    const c = Math.floor(n / 256) % 256;
-    const d = n % 256;
-    return `${a}.${b}.${c}.${d}`;
+    return [
+      (n >>> 24) & 255,
+      (n >>> 16) & 255,
+      (n >>> 8) & 255,
+      n & 255
+    ].join('.');
   }
 
-  function expandOctetPart(part) {
-    if (/^\d+$/.test(part)) {
+  function expandTarget(spec) {
+    // CIDR
+    if (spec.includes('/')) {
+      const [ip, bitsText] = spec.split('/');
+      const bits = Number(bitsText);
+      if (!Number.isInteger(bits) || bits < 0 || bits > 32) throw new Error('잘못된 CIDR: ' + spec);
+      const base = ipToInt(ip);
+      const mask = bits === 0 ? 0 : (0xffffffff << (32-bits)) >>> 0;
+      const start = (base & mask) >>> 0;
+      const count = 2 ** (32-bits);
+      if (count > 1000000) throw new Error('대상 범위가 너무 큽니다: ' + spec);
+      const arr = new Array(count);
+      for (let i=0; i<count; i++) arr[i] = intToIp((start+i) >>> 0);
+      return arr;
+    }
+
+    // Nmap octet range: 10.96.10-11.0-255
+    const parts = spec.split('.');
+    if (parts.length !== 4) throw new Error('지원하지 않는 대상 형식: ' + spec);
+    const ranges = parts.map(part => {
+      if (part.includes('-')) {
+        const [a,b] = part.split('-').map(Number);
+        if (![a,b].every(Number.isInteger) || a<0 || b>255 || a>b) throw new Error('잘못된 범위: '+spec);
+        return [a,b];
+      }
       const n = Number(part);
-      if (n < 0 || n > 255) throw new Error(`잘못된 옥텟: ${part}`);
-      return [n];
-    }
-    const m = part.match(/^(\d+)-(\d+)$/);
-    if (!m) throw new Error(`지원하지 않는 옥텟 형식: ${part}`);
-    const start = Number(m[1]), end = Number(m[2]);
-    if (start < 0 || end > 255 || start > end) throw new Error(`잘못된 옥텟 범위: ${part}`);
-    return Array.from({length:end-start+1},(_,i)=>start+i);
-  }
+      if (!Number.isInteger(n) || n<0 || n>255) throw new Error('잘못된 범위: '+spec);
+      return [n,n];
+    });
 
-  function expandTargetToken(token) {
-    token = token.trim();
-    if (!token) return [];
-    if (token.includes('/')) {
-      const [ip, prefixText] = token.split('/');
-      const prefix = Number(prefixText);
-      if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) throw new Error(`잘못된 CIDR: ${token}`);
-      const ipNum = ipToInt(ip);
-      const size = 2 ** (32 - prefix);
-      if (size > 1048576) throw new Error(`CIDR이 너무 큽니다: ${token}`);
-      const base = Math.floor(ipNum / size) * size;
-      return Array.from({length:size},(_,i)=>intToIp(base+i));
-    }
-    const parts = token.split('.');
-    if (parts.length !== 4) throw new Error(`지원하지 않는 대상 형식: ${token}`);
-    const lists = parts.map(expandOctetPart);
-    const total = lists.reduce((a,b)=>a*b.length,1);
-    if (total > 1048576) throw new Error(`대상 범위가 너무 큽니다: ${token}`);
-    const out=[];
-    for (const a of lists[0]) for (const b of lists[1]) for (const c of lists[2]) for (const d of lists[3]) out.push(`${a}.${b}.${c}.${d}`);
+    const out = [];
+    for (let a=ranges[0][0]; a<=ranges[0][1]; a++)
+      for (let b=ranges[1][0]; b<=ranges[1][1]; b++)
+        for (let c=ranges[2][0]; c<=ranges[2][1]; c++)
+          for (let d=ranges[3][0]; d<=ranges[3][1]; d++)
+            out.push(`${a}.${b}.${c}.${d}`);
     return out;
   }
 
-  function expandTargetExpression(expr) {
-    const tokens = String(expr).split(/[\s,]+/).map(x=>x.trim()).filter(Boolean);
-    if (!tokens.length) throw new Error('원래 대상 범위를 입력하세요.');
-    const out=[], seen=new Set();
-    for (const token of tokens) {
-      for (const ip of expandTargetToken(token)) if (!seen.has(ip)) { seen.add(ip); out.push(ip); }
-      if (out.length > 1048576) throw new Error('전체 대상이 1,048,576개를 넘습니다.');
+  function expandTargets(specs) {
+    const set = new Set();
+    for (const spec of specs) {
+      for (const ip of expandTarget(spec)) set.add(ip);
     }
-    return out;
+    return [...set];
   }
 
-  function calculateRemainingTargets() {
-    if (!actualHostIPs.length) throw new Error('XML에서 실제 <host> IP를 찾지 못했습니다.');
-    if (/(^|\s)--randomize-hosts(\s|$)/.test(nmapArgs) || /(^|\s)-iR(\s|$)/.test(nmapArgs)) throw new Error('--randomize-hosts 또는 -iR 스캔은 지원하지 않습니다.');
-    const targets = expandTargetExpression(resumeTargets.value);
-    const indexByIp = new Map(targets.map((ip,idx)=>[ip,idx]));
-    let checkpointIndex=-1, checkpointIp='', matched=0;
-    for (const ip of actualHostIPs) {
-      const idx=indexByIp.get(ip);
-      if (idx!==undefined) { matched++; if (idx>checkpointIndex) { checkpointIndex=idx; checkpointIp=ip; } }
-    }
-    if (checkpointIndex<0) throw new Error('XML의 실제 host IP와 입력한 대상 범위가 맞지 않습니다.');
-    let startIndex, duplicateCount=0;
-    if (resumeMode.value==='exact') startIndex=checkpointIndex+1;
-    else {
-      const overlap=Math.max(0,Number(resumeOverlap.value)||0);
-      startIndex=Math.max(0,checkpointIndex-overlap+1);
-      duplicateCount=checkpointIndex-startIndex+1;
-    }
-    remainingTargets=targets.slice(startIndex);
-    return {total:targets.length,matched,checkpointIp,checkpointIndex,startIndex,remaining:remainingTargets.length,duplicateCount};
+  function directChildren(node, tag) {
+    return [...node.children].filter(x => x.tagName.toLowerCase() === tag.toLowerCase());
   }
 
-  function downloadTextFile(lines, filename) {
-    const blob=new Blob([lines.join('\r\n')+'\r\n'],{type:'text/plain;charset=utf-8'});
-    const url=URL.createObjectURL(blob), a=document.createElement('a');
-    a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
-  }
+  function parseHostElement(host) {
+    const addresses = directChildren(host, 'address');
+    const ipv4 = addresses.find(x => x.getAttribute('addrtype') === 'ipv4') || addresses[0];
+    const macNode = addresses.find(x => x.getAttribute('addrtype') === 'mac');
+    const ip = ipv4?.getAttribute('addr') || '';
+    const mac = macNode?.getAttribute('addr') || '';
+    const macVendor = macNode?.getAttribute('vendor') || '';
 
-  function csvEscape(value) {
-    const s = String(value ?? '');
-    return '"' + s.replaceAll('"', '""') + '"';
-  }
+    const hostnamesNode = directChildren(host, 'hostnames')[0];
+    const hostname = hostnamesNode
+      ? directChildren(hostnamesNode, 'hostname').map(x => x.getAttribute('name') || '').filter(Boolean).join('; ')
+      : '';
 
-  function downloadCsv(data, suffix) {
-    const cols = [
-      'IP','Hostname','MAC','MACVendor','Port','Protocol','State',
-      'Service','Product','Version','ExtraInfo','CPE','OS','OSAccuracy'
-    ];
-
-    const lines = [cols.map(csvEscape).join(',')];
-
-    for (const r of data) {
-      lines.push(cols.map(c => csvEscape(r[c])).join(','));
+    let osName = '', osAccuracy = '';
+    const osNode = directChildren(host, 'os')[0];
+    if (osNode) {
+      const matches = directChildren(osNode, 'osmatch').sort(
+        (a,b) => Number(b.getAttribute('accuracy')||0) - Number(a.getAttribute('accuracy')||0)
+      );
+      if (matches[0]) {
+        osName = matches[0].getAttribute('name') || '';
+        osAccuracy = matches[0].getAttribute('accuracy') || '';
+      }
     }
 
-    const csv = '\ufeff' + lines.join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const hostRows = [];
+    const portsNode = directChildren(host, 'ports')[0];
+    if (portsNode) {
+      for (const port of directChildren(portsNode, 'port')) {
+        const state = directChildren(port, 'state')[0];
+        const svc = directChildren(port, 'service')[0];
+        const cpes = svc ? directChildren(svc, 'cpe').map(x => x.textContent.trim()).filter(Boolean).join('; ') : '';
+        hostRows.push({
+          IP: ip,
+          Hostname: hostname,
+          MAC: mac,
+          MACVendor: macVendor,
+          Port: port.getAttribute('portid') || '',
+          Protocol: port.getAttribute('protocol') || '',
+          State: state?.getAttribute('state') || '',
+          Service: svc?.getAttribute('name') || '',
+          Product: svc?.getAttribute('product') || '',
+          Version: svc?.getAttribute('version') || '',
+          ExtraInfo: svc?.getAttribute('extrainfo') || '',
+          CPE: cpes,
+          OS: osName,
+          OSAccuracy: osAccuracy
+        });
+      }
+    }
+    return { ip, rows: hostRows };
+  }
+
+  function parseCompleteXml(raw) {
+    const doc = new DOMParser().parseFromString(raw, 'application/xml');
+    if (doc.querySelector('parsererror')) return null;
+    if (!doc.documentElement || doc.documentElement.tagName !== 'nmaprun') return null;
+
+    const hosts = directChildren(doc.documentElement, 'host');
+    const outRows = [];
+    const completed = new Set();
+    for (const h of hosts) {
+      const parsed = parseHostElement(h);
+      if (parsed.ip) completed.add(parsed.ip);
+      outRows.push(...parsed.rows);
+    }
+    return { rows: outRows, completed };
+  }
+
+  function parseClosedHostBlocks(raw) {
+    // 중단된 XML에서도 완전히 닫힌 <host>...</host> 블록만 사용.
+    // <hosthint>는 패턴이 다르므로 포함되지 않음.
+    const blocks = raw.match(/<host(?:\s[^>]*)?>[\s\S]*?<\/host>/gi) || [];
+    const completed = new Set();
+    const outRows = [];
+
+    for (const block of blocks) {
+      const doc = new DOMParser().parseFromString(`<root>${block}</root>`, 'application/xml');
+      if (doc.querySelector('parsererror')) continue;
+      const h = directChildren(doc.documentElement, 'host')[0];
+      if (!h) continue;
+      const parsed = parseHostElement(h);
+      if (parsed.ip) completed.add(parsed.ip);
+      outRows.push(...parsed.rows);
+    }
+    return { rows: outRows, completed };
+  }
+
+  function countOpenPorts(data) {
+    return data.filter(r => String(r.State).toLowerCase() === 'open').length;
+  }
+
+  function csvEscape(v) {
+    return '"' + String(v ?? '').replaceAll('"','""') + '"';
+  }
+
+  function download(name, content, type) {
+    const blob = new Blob([content], {type});
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement('a');
-    const base = sourceFileName.replace(/\.xml$/i, '') || 'nmap';
-    a.href = url;
-    a.download = `${base}-${suffix}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  async function loadFile(file) {
-    if (!file) return;
-    sourceFileName = file.name;
+  function saveCsv() {
+    const lines = [cols.map(csvEscape).join(',')];
+    for (const r of rows) lines.push(cols.map(c => csvEscape(r[c])).join(','));
+    download(sourceName.replace(/\.xml$/i,'') + '-ports.csv', '\ufeff' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+  }
 
-    statusEl.className = 'status';
-    statusEl.textContent = `읽는 중: ${file.name}`;
+  function saveRemaining() {
+    download(sourceName.replace(/\.xml$/i,'') + '-remaining.txt', remaining.join('\r\n') + '\r\n', 'text/plain;charset=utf-8');
+  }
+
+  function renderPreview() {
+    const body = $('preview');
+    body.replaceChildren();
+    for (const r of rows.slice(0, 200)) {
+      const tr = document.createElement('tr');
+      for (const c of cols) {
+        const td = document.createElement('td');
+        td.textContent = r[c] || '';
+        tr.appendChild(td);
+      }
+      body.appendChild(tr);
+    }
+    $('previewBox').hidden = rows.length === 0;
+  }
+
+  async function loadFile(file) {
+    sourceName = file.name;
+    rows = [];
+    remaining = [];
+    csvBtn.disabled = true;
+    remainBtn.disabled = true;
+    $('command').textContent = '-';
+    $('xmlState').textContent = '-';
+    $('hostCount').textContent = '0';
+    $('portCount').textContent = '0';
+    $('targetCount').textContent = '0';
+    $('remainCount').textContent = '0';
+    $('previewBox').hidden = true;
 
     try {
-      const xmlText = await file.text();
-      const parsed = parseNmapXml(xmlText);
+      const raw = await file.text();
+      const args = extractArgs(raw);
+      $('command').textContent = args || '(args 속성을 찾지 못했습니다)';
 
-      rows = parsed.rows;
-      noOpenHosts = parsed.noOpenHosts;
-      actualHostIPs = parsed.actualHostIPs;
-      nmapArgs = parsed.nmapArgs || '';
-      remainingTargets = [];
-      makeRemainingBtn.disabled = false;
-      downloadRemainingBtn.disabled = true;
-      resumeStatus.className = 'status';
-      resumeStatus.textContent = '원래 대상 범위를 입력한 뒤 남은 IP 목록 계산을 누르세요.';
-      upHostCount.textContent = parsed.upHostCount.toLocaleString();
-      openHostCount.textContent = parsed.openHostCount.toLocaleString();
-      hostHintCount.textContent = parsed.hostHintCount.toLocaleString();
-      openPortCount.textContent = parsed.openPortCount.toLocaleString();
+      const complete = /<\/nmaprun>\s*$/i.test(raw.trim()) ? parseCompleteXml(raw) : null;
+
+      if (complete) {
+        rows = complete.rows;
+        $('xmlState').textContent = '완료';
+        $('hostCount').textContent = complete.completed.size.toLocaleString();
+        $('portCount').textContent = countOpenPorts(rows).toLocaleString();
+        csvBtn.disabled = rows.length === 0;
+        status.className = 'status ok';
+        status.textContent = `완료된 XML입니다. CSV로 변환할 수 있습니다. 포트 행 ${rows.length.toLocaleString()}개.`;
+        renderPreview();
+        return;
+      }
+
+      // 불완전 XML: 닫힌 host 블록만 회수
+      const partial = parseClosedHostBlocks(raw);
+      rows = partial.rows;
+
+      const specs = extractTargets(args);
+      if (!args) throw new Error('불완전 XML이며 <nmaprun args="..."> 명령 기록도 찾지 못했습니다.');
+      if (/\s-iL(?:\s|=)/i.test(' ' + args) || /\s-iR(?:\s|=)/i.test(' ' + args)) {
+        throw new Error('원래 명령이 -iL 또는 -iR을 사용했습니다. XML만으로 원래 전체 대상 목록을 복원할 수 없습니다.');
+      }
+      if (specs.length === 0) throw new Error('Nmap 명령에서 IPv4 대상 범위를 찾지 못했습니다.');
+
+      const targets = expandTargets(specs);
+      const completed = partial.completed;
+
+      // 보수적 재시도: XML에 완전히 닫힌 <host>가 있는 IP만 제외.
+      // down/미기록/진행중 IP는 모두 다시 스캔.
+      remaining = targets.filter(ip => !completed.has(ip));
+
+      $('xmlState').textContent = '중단/손상';
+      $('hostCount').textContent = completed.size.toLocaleString();
+      $('portCount').textContent = countOpenPorts(rows).toLocaleString();
+      $('targetCount').textContent = targets.length.toLocaleString();
+      $('remainCount').textContent = remaining.length.toLocaleString();
 
       csvBtn.disabled = rows.length === 0;
-      allCsvBtn.disabled = rows.length === 0;
+      remainBtn.disabled = remaining.length === 0;
 
-      statusEl.className = 'status ok';
-      statusEl.textContent =
-        `완료: ${file.name} — Up Hosts ${parsed.upHostCount.toLocaleString()}개, ` +
-        `Open Port Hosts ${parsed.openHostCount.toLocaleString()}개, ` +
-        `Open Ports ${parsed.openPortCount.toLocaleString()}개, ` +
-        `Host Hints 제외 ${parsed.hostHintCount.toLocaleString()}개`;
+      status.className = 'status warn';
+      status.textContent =
+        `중단된 XML로 판단했습니다.\n` +
+        `원래 대상 ${targets.length.toLocaleString()}개 중 완전히 닫힌 <host> 결과 ${completed.size.toLocaleString()}개를 제외하고 ` +
+        `${remaining.length.toLocaleString()}개를 재스캔 목록으로 만들었습니다.\n` +
+        `※ Nmap은 down 호스트와 진행 중 host-group 상태를 XML에 완전하게 남기지 않으므로, 재스캔 목록에는 이미 처리된 IP가 일부 포함될 수 있습니다. 누락 방지를 우선한 방식입니다.`;
 
-      applyFilters();
+      renderPreview();
+
     } catch (e) {
-      rows = [];
-      filteredRows = [];
-      noOpenHosts = [];
-      actualHostIPs = [];
-      nmapArgs = '';
-      remainingTargets = [];
-      makeRemainingBtn.disabled = true;
-      downloadRemainingBtn.disabled = true;
-      resultBody.replaceChildren();
-      summaryBody.replaceChildren();
-      noOpenHostBody.replaceChildren();
-      upHostCount.textContent = '0';
-      openHostCount.textContent = '0';
-      hostHintCount.textContent = '0';
-      openPortCount.textContent = '0';
-      filteredCount.textContent = '0';
-      serviceCount.textContent = '0';
-      csvBtn.disabled = true;
-      allCsvBtn.disabled = true;
-
-      statusEl.className = 'status error';
-      statusEl.textContent = e instanceof Error ? e.message : String(e);
+      status.className = 'status err';
+      status.textContent = e instanceof Error ? e.message : String(e);
     }
   }
 
-  fileInput.addEventListener('change', () => loadFile(fileInput.files[0]));
-
-  for (const el of [stateFilter, hostFilter, portFilter, serviceFilter]) {
-    el.addEventListener('input', applyFilters);
-    el.addEventListener('change', applyFilters);
-  }
-
-  resetBtn.addEventListener('click', () => {
-    stateFilter.value = 'open';
-    hostFilter.value = '';
-    portFilter.value = '';
-    serviceFilter.value = '';
-    sortKey = 'IP';
-    sortAsc = true;
-    applyFilters();
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) loadFile(fileInput.files[0]);
   });
+  csvBtn.addEventListener('click', saveCsv);
+  remainBtn.addEventListener('click', saveRemaining);
 
-  csvBtn.addEventListener('click', () => downloadCsv(filteredRows, 'filtered'));
-  allCsvBtn.addEventListener('click', () => downloadCsv(rows, 'all'));
-
-  document.querySelectorAll('#resultTable th[data-key]').forEach(th => {
-    th.addEventListener('click', () => {
-      const key = th.dataset.key;
-      if (sortKey === key) sortAsc = !sortAsc;
-      else {
-        sortKey = key;
-        sortAsc = true;
-      }
-      applyFilters();
-    });
-  });
-
-  makeRemainingBtn.addEventListener('click', () => {
-    try {
-      const info=calculateRemainingTargets();
-      downloadRemainingBtn.disabled=remainingTargets.length===0;
-      resumeStatus.className='status ok';
-      const modeText=resumeMode.value==='safe'?'보수적 재개':'마지막 기록 IP 다음부터';
-      resumeStatus.textContent=`${modeText}: 전체 ${info.total.toLocaleString()} IP, XML 일치 host ${info.matched.toLocaleString()}개, 체크포인트 ${info.checkpointIp} (#${(info.checkpointIndex+1).toLocaleString()}), 재시작 #${(info.startIndex+1).toLocaleString()}, 남은 ${info.remaining.toLocaleString()} IP` + (info.duplicateCount?` (중복 재스캔 ${info.duplicateCount.toLocaleString()} IP 포함)`:'');
-    } catch(e) {
-      remainingTargets=[]; downloadRemainingBtn.disabled=true; resumeStatus.className='status error'; resumeStatus.textContent=e instanceof Error?e.message:String(e);
-    }
-  });
-
-  downloadRemainingBtn.addEventListener('click',()=>{
-    if (remainingTargets.length) downloadTextFile(remainingTargets,'targets_remaining.txt');
-  });
-
-  ['dragenter','dragover'].forEach(type => {
-    dropzone.addEventListener(type, e => {
-      e.preventDefault();
-      dropzone.classList.add('drag');
-    });
-  });
-
-  ['dragleave','drop'].forEach(type => {
-    dropzone.addEventListener(type, e => {
-      e.preventDefault();
-      dropzone.classList.remove('drag');
-    });
-  });
-
-  dropzone.addEventListener('drop', e => {
-    const file = e.dataTransfer.files?.[0];
-    if (file) loadFile(file);
+  ['dragenter','dragover'].forEach(evt => drop.addEventListener(evt, e => {
+    e.preventDefault(); drop.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(evt => drop.addEventListener(evt, e => {
+    e.preventDefault(); drop.classList.remove('drag');
+  }));
+  drop.addEventListener('drop', e => {
+    const f = e.dataTransfer.files?.[0];
+    if (f) loadFile(f);
   });
 })();
 </script>

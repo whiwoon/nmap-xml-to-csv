@@ -5,24 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nmap Helper</title>
 <style>
-:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#171717;background:#f6f6f6}
-*{box-sizing:border-box}body{margin:0}main{max-width:860px;margin:auto;padding:28px 20px 48px}
-h1{font-size:26px;margin:0 0 4px}.sub{color:#666;font-size:13px;margin-bottom:22px}
-.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:18px;margin:14px 0}
-.title{font-weight:700;margin-bottom:10px}.hint{color:#6b6b6b;font-size:12px;line-height:1.5;margin-top:8px}
-.drop{border:2px dashed #c8c8c8;border-radius:10px;padding:22px;text-align:center;color:#666;cursor:pointer}
-.drop.drag{border-color:#1769e0;background:#f1f6ff}.drop strong{color:#222}
-input[type=file]{display:none}.files{margin-top:10px;font-size:13px;line-height:1.55}
-.filetag{display:inline-block;background:#f1f1f1;border-radius:999px;padding:4px 8px;margin:3px 5px 0 0}
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#171717;background:#f5f6f8}
+*{box-sizing:border-box}body{margin:0}main{max-width:820px;margin:auto;padding:32px 20px 48px}
+h1{font-size:26px;margin:0 0 5px}.sub{color:#68707a;font-size:13px;line-height:1.5;margin-bottom:24px}
+.card{background:#fff;border:1px solid #e2e5e9;border-radius:10px;padding:18px 20px;margin:12px 0}
+.title{font-weight:700;font-size:16px;margin:0 0 12px}.hint{color:#737b84;font-size:12px;line-height:1.5;margin-top:8px}
+.drop{display:block;border:1px solid #d9dde2;border-radius:8px;padding:16px 18px;background:#fafbfc;color:#68707a;cursor:pointer;line-height:1.55}
+.drop:hover,.drop.drag{border-color:#1769e0;background:#f5f8ff}.drop strong{display:block;color:#20242a;font-size:14px;margin-bottom:2px}
+input[type=file]{display:none}.files{margin-top:8px;font-size:13px;line-height:1.55;min-height:0}
+.filetag{display:inline-block;background:#eef1f4;color:#353b42;border-radius:6px;padding:4px 7px;margin:3px 5px 0 0}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-button{font:inherit;padding:10px 14px;border-radius:8px;border:1px solid #bbb;background:#fff;cursor:pointer}
+button{font:inherit;padding:9px 13px;border-radius:7px;border:1px solid #c9ced5;background:#fff;color:#252a30;cursor:pointer}
 button.primary{background:#1769e0;border-color:#1769e0;color:#fff}button:disabled{opacity:.45;cursor:default}
-.status{white-space:pre-wrap;line-height:1.55;font-size:13px;padding:12px;border-radius:8px;background:#f7f7f7;margin-top:12px}
+.status{white-space:pre-wrap;line-height:1.55;font-size:13px;padding:11px 12px;border:1px solid #e3e6ea;border-radius:7px;background:#fafbfc;margin-top:12px}
 .ok{color:#05603a}.warn{color:#8a4b08}.err{color:#b42318}
-.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:12px}
-.metric{border:1px solid #e0e0e0;border-radius:9px;padding:10px}.metric span{display:block;color:#666;font-size:12px}.metric b{font-size:21px}
-details{margin-top:12px}summary{cursor:pointer;font-size:13px;color:#555}
-pre{background:#f7f7f7;border-radius:8px;padding:10px;overflow:auto;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px}
+.metric{border:1px solid #e3e6ea;border-radius:8px;padding:10px;background:#fff}.metric span{display:block;color:#747c85;font-size:12px}.metric b{font-size:20px}
+details{margin-top:12px}summary{cursor:pointer;font-size:13px;color:#59616a}
+pre{background:#fafbfc;border:1px solid #e3e6ea;border-radius:7px;padding:10px;overflow:auto;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
 </style>
 </head>
 <body>
@@ -33,7 +33,7 @@ pre{background:#f7f7f7;border-radius:8px;padding:10px;overflow:auto;font:12px ui
 <section class="card">
   <div class="title">1. XML 파일</div>
   <label id="xmlDrop" class="drop">
-    <strong>XML 파일 선택</strong><br>여러 개를 한 번에 선택하거나 끌어다 놓을 수 있습니다.
+    <strong>XML 파일 선택</strong>여러 개를 한 번에 선택하거나 여기로 끌어다 놓으세요.
     <input id="xmlInput" type="file" accept=".xml,text/xml,application/xml" multiple>
   </label>
   <div id="xmlFiles" class="files"></div>
@@ -42,7 +42,7 @@ pre{background:#f7f7f7;border-radius:8px;padding:10px;overflow:auto;font:12px ui
 <section class="card">
   <div class="title">2. 대상 목록 파일 <span style="font-weight:400;color:#777">(선택)</span></div>
   <label id="targetDrop" class="drop">
-    <strong>-iL로 스캔했다면 원래 대상 TXT 선택</strong><br>IP, CIDR, Nmap 범위 표기를 지원합니다.
+    <strong>-iL 대상 TXT 선택</strong>-iL로 스캔한 경우에만 선택하세요. IP, CIDR, Nmap 범위 표기를 지원합니다.
     <input id="targetInput" type="file" accept=".txt,text/plain">
   </label>
   <div id="targetFile" class="files"></div>
